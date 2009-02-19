@@ -1,5 +1,9 @@
-$:.unshift File.dirname(__FILE__) + '/../../xbiblio/citeproc-rb/lib/'
-require 'citeproc'
+begin
+  require 'citeproc'
+rescue MissingSourceFile => e
+  $:.unshift File.dirname(__FILE__) + '/../../xbiblio/citeproc-rb/lib/'
+  require 'citeproc'
+end
 
 require 'models'
 require 'map'

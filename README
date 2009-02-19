@@ -1,0 +1,7 @@
+= ZoteroDB
+
+Ruby data mapping and citation formatting for Zotero's schema
+
+== Usage
+
+see http://github.com/jschementi/zoterodb-rb/tree/master/samples/demo.rb

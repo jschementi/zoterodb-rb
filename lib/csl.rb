@@ -1,7 +1,8 @@
 begin
+  $:.unshift File.dirname(__FILE__) + '/../etc/xbiblio/citeproc-rb/lib/'
   require 'citeproc'
 rescue MissingSourceFile => e
-  $:.unshift File.dirname(__FILE__) + '/../etc/xbiblio/citeproc-rb/lib/'
+  require 'rubygems'
   require 'citeproc'
 end
 

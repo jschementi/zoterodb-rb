@@ -1,4 +1,4 @@
-$:.unshift "#{File.dirname(__FILE__)}/../"
+$:.unshift "#{File.dirname(__FILE__)}/../lib/"
 require 'zoterodb'
 
 include ZoteroDB::Models

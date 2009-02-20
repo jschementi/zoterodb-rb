@@ -1,5 +1,5 @@
 begin
-  $:.unshift File.dirname(__FILE__) + '/../etc/xbiblio/citeproc-rb/lib/'
+  $:.unshift File.dirname(__FILE__) + '/../xbiblio/citeproc-rb/lib/'
   require 'citeproc'
 rescue MissingSourceFile => e
   require 'rubygems'
@@ -72,7 +72,7 @@ module ZoteroDB
         end
 
       style = Citeproc::CslParser.
-        new(File.dirname(__FILE__) + "/../../xbiblio/citeproc-rb/data/styles/#{style}.csl").style
+        new(File.dirname(__FILE__) + "/../xbiblio/citeproc-rb/data/styles/#{style}.csl").style
 
       processor = Citeproc::CslProcessor.new
       formatter = Citeproc::BaseFormatter.new

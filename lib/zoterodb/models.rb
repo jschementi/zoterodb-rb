@@ -31,8 +31,15 @@ module ZoteroDB::Models
     property :name, String, :field => 'typeName'
     property :display, Enum[:hide, :display, :primary], :default => :display
 
-    has n, :item_type_fields
-    has n, :fields, :through => :item_type_fields
+    has n, :item_type_fields, :order => ['position']
+    
+    # TODO: though item_type_fields is sorted by position, the fields aren't
+    # when using the below commented out line.
+    #has n, :fields, :through => :item_type_fields
+    def fields
+      item_type_fields.map{|itf| itf.field}
+    end
+    
     has n, :base_field_mappings
     def base_fields
       fields - 
@@ -54,6 +61,18 @@ module ZoteroDB::Models
 
   class Field
     include DataMapper::Resource
+
+    DM_CONFLICT_MAP = %W(type repository).inject({}) do |map, thing|
+      map[thing] = "___#{thing}"; map
+    end
+
+    def safe_name
+      DM_CONFLICT_MAP[name] || name
+    end
+
+    def self.real_name(safe_name)
+      DM_CONFLICT_MAP.index(safe_name)
+    end
 
     #def self.default_repository_name
     #  SYSTEM_REPOSITORY
@@ -89,8 +108,10 @@ module ZoteroDB::Models
 
     property :item_type_id, Integer, :field => 'itemTypeID', :key => true
     property :field_id, Integer, :field => 'fieldID', :key => true
-    property :hide, Integer
+    property :hide, Boolean, :default => false
     property :position, Integer, :field => 'orderIndex'
+
+    is :list, :scope => [:item_type_id]
 
     belongs_to :item_type
     belongs_to :field
@@ -182,7 +203,6 @@ module ZoteroDB::Models
     has n, :creators, :through => :item_creators, :mutable => true
 
     def method_missing(m, *args)
-
       # Figure out if this is a setter or a getter
       setter = false
       if m.to_s =~ /(.*?)=$/
@@ -192,8 +212,11 @@ module ZoteroDB::Models
       end
 
       # special cases to get around fields named the same as existing methods
-      m = 'repository' if m.to_s == '_repository'
-      m = 'type' if m.to_s == '_type'
+      m = Field.real_name(m.to_s) || m
+
+      # Make sure the field isn't a multi-parameter field. If so, do the
+      # necessary conversions.
+      m, property = Field.get_actual_name_and_property(m.to_s)
 
       # Get the field
       item_type_field = self.item_type.item_type_fields.
@@ -202,30 +225,53 @@ module ZoteroDB::Models
       unless field
         # Figure out the field from a base_field
         base_field_map = BaseFieldMapping.first('base_field.name' => m.to_s, 
-          'item_type' => self.item_type)
+          :item_type_id => self.item_type_id)
         field = base_field_map.field if base_field_map
       end
 
       # bail out if no field was found
       return super unless field
 
-      # TODO how come self.item_data.first(:field_id => field.id) doesn't work?
       data =  ItemData.first(:field_id => field.id, :item_id => self.id)
 
       # Give up if trying to get a value that doesn't exist
       return nil if !setter && !data
 
       if setter
-        unless data
-          # Create the ItemDataValue for the first time
-          value = ItemDataValue.create :value => args.first
-          data = ItemData.create(:field => field, 
-            :value => value, :item_id => self.id)
+
+        # Typecast the value being set
+        data_value = if field.respond_to?(:field_type)
+          if property
+            _type = data ? field.field_type.new(data.value.value) : field.field_type.new
+            _type.send("#{property}=", args.first)
+            _type
+          else
+            field.field_type.new(args.first)
+          end.to_s
         else
-          data.value.update_attributes(:value => args.first)
+          # If for some reason we don't know the field type,
+          # don't bother to typecast
+          args.first.to_s
+        end
+
+        value = ItemDataValue.first(:value => data_value) ||
+          ItemDataValue.create(:value => data_value)
+
+        unless data
+          data = ItemData.create(:field => field, :value => value,
+            :item_id => self.id)
+        else
+          data.update_attributes(:value_id => value.id)
         end
       end
-      data.value.value
+
+      if data.respond_to?(:typecast_value) && !property
+        data.typecast_value
+      elsif data.respond_to?(:typecast_value) && property :
+        data.typecast_value.send(property)
+      else
+        data.value.value
+      end
     end
   end
 
@@ -273,6 +319,8 @@ module ZoteroDB::Models
     property :creator_type_id, Integer, 
       :field => 'creatorTypeID', :default => 1, :key => true
     property :position, Integer, :field => 'orderIndex', :key => true
+
+    is :list, :scope => [:item_id]
 
     belongs_to :item
     belongs_to :creator

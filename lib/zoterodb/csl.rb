@@ -24,9 +24,6 @@ module ZoteroDB
         # look at the base types, as the real types can just be a facade
         item.item_type.fields.each do |f|
 
-          f.name = '_repository' if f.name == 'repository'
-          f.name = '_type' if f.name == 'type'
-
           # Use the field_map table to find a name for the field that the
           # citation can use. If that field isn't in the table, just use
           # it's current name. Note that one item field can set multiple
@@ -60,7 +57,7 @@ module ZoteroDB
     #
     # Format item(s) in a CSL style
     #
-    def self.format(items, style, type = :bibliography)
+    def self.format(items, style, type = :bibliography, format = :html)
       type = :citation if type == :note
       count = 0
 
@@ -72,10 +69,17 @@ module ZoteroDB
         end
 
       style = Citeproc::CslParser.
-        new(File.dirname(__FILE__) + "/../xbiblio/citeproc-rb/data/styles/#{style}.csl").style
+        new(File.dirname(__FILE__) + "/../xbiblio/citeproc-rb/data/styles/#{style.downcase}.csl").style
 
       processor = Citeproc::CslProcessor.new
-      formatter = Citeproc::BaseFormatter.new
+      formatter = 
+        if format == :xhtml
+          Citeproc::XhtmlFormatter
+        elsif format == :html
+          Citeproc::HtmlFormatter
+        else
+          Citeproc::BaseFormatter
+        end.new
 
       nodes = processor.send("process_#{type}", input_filter, style, nil)
       formatter.format(nodes)

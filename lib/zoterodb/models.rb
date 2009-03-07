@@ -5,7 +5,7 @@ require 'dm-core'
 require 'dm-serializer'
 require 'dm-types'
 require 'dm-timestamps'
-
+require 'dm-is-list'
 
 #
 # Data map of Zotero database
@@ -216,7 +216,11 @@ module ZoteroDB::Models
 
       # Make sure the field isn't a multi-parameter field. If so, do the
       # necessary conversions.
-      m, property = Field.get_actual_name_and_property(m.to_s)
+      m, property = if Field.respond_to?(:get_actual_name_and_property)
+        Field.get_actual_name_and_property(m.to_s)
+      else
+        [m.to_s, nil]
+      end
 
       # Get the field
       item_type_field = self.item_type.item_type_fields.

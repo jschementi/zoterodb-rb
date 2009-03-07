@@ -14,4 +14,4 @@ DataMapper.setup :default, db
 #DataMapper.setup :default, "sqlite3:///#{Dir.pwd}/db/user.sqlite"
 #DataMapper.setup :system, "sqlite3:///#{Dir.pwd}/db/system.sqlite"
 
-puts ZoteroDB::Formatting.format(ZoteroDB::Models::Item.all, :mla)
+puts ZoteroDB::Formatting.format(ZoteroDB::Models::Item.all, :mla, :bibliography, :base)

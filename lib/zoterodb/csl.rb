@@ -68,8 +68,10 @@ module ZoteroDB
           csls
         end
 
-      style = Citeproc::CslParser.
-        new(File.dirname(__FILE__) + "/../xbiblio/citeproc-rb/data/styles/#{style.downcase}.csl").style
+      style = Citeproc::CslParser.new(
+        File.dirname(__FILE__) +
+        "/../xbiblio/citeproc-rb/data/styles/#{style.to_s.downcase}.csl"
+      ).style
 
       processor = Citeproc::CslProcessor.new
       formatter = 

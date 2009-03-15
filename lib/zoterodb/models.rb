@@ -1,3 +1,5 @@
+require 'digest/sha1'
+
 require 'rubygems'
 require 'activesupport'
 
@@ -151,10 +153,10 @@ module ZoteroDB::Models
 
     has n, :item_type_creator_types
 
-    #repository(:default) do
-    #  has n, :item_creators
-    #  has n, :creators, :through => :item_creators
-    #end
+    repository(:default) do
+      has n, :item_creators
+      has n, :creators, :through => :item_creators
+    end
   end
 
   class ItemTypeCreatorType
@@ -303,15 +305,45 @@ module ZoteroDB::Models
       :class_name => "ItemDataValue", :child_key => [:value_id]
   end
 
+  class CreatorData
+    include DataMapper::Resource
+    storage_names[:default] = 'creatorData'
+
+    property :id, Serial, :field => 'creatorDataID'
+    property :first_name, Text, :field => 'firstName'
+    property :middle_name, Text, :field => 'shortName'
+    property :last_name, Text, :field => 'lastName'
+    property :mode, Integer, :field => "fieldMode"
+    property :birth_year, Integer, :field => 'birthYear'
+  end
+
   class Creator
     include DataMapper::Resource
     storage_names[:default] = 'creators'
 
     property :id, Serial, :field => 'creatorID'
-    property :first_name, Text, :field => 'firstName'
-    #property :middle_name, Text, :field => 'middleName'
-    property :last_name, Text, :field => 'lastName'
-    property :mode, Integer, :field => "fieldMode"
+    property :creator_data_id, Integer, :field => 'creatorDataID', :key => true
+    property :created_at, DateTime, :field => 'dateAdded'
+    property :updated_at, DateTime, :field => 'dateModified'
+    property :key, Text
+
+    before(:create) do
+      while self.key.nil? || Creator.first(:key => self.key)
+        self.key = Digest::SHA1.hexdigest("--#{Time.now}--")
+      end
+    end
+
+    belongs_to :creator_data
+
+    def self.build_with_data(last, first, middle = nil)
+      data_opts      = {:first_name => first, :middle_name => middle, :last_name => last}
+      creator_data   = CreatorData.first(data_opts)
+      creator_data ||= CreatorData.create(data_opts)
+      creator_opts   = {:creator_data_id => creator_data.id}
+      creator        = Creator.first(creator_opts)
+      creator      ||= Creator.create(creator_opts)
+      creator
+    end
   end
 
   class ItemCreator
@@ -332,5 +364,15 @@ module ZoteroDB::Models
     repository(SYSTEM_REPOSITORY) do
       belongs_to :creator_type
     end
+  end
+
+  class ItemNote
+    include DataMapper::Resource
+    storage_names[:default] = "itemNotes"
+
+    property :id, Serial, :field => 'itemID'
+    property :item_id, Integer, :field => 'sourceItemID'
+    property :note, Text
+    property :title, Text
   end
 end

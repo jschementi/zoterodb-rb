@@ -149,3 +149,79 @@ describe Field do
     Field.new(:name => 'doesnotexist').safe_name.should == 'doesnotexist'
   end
 end
+
+describe ItemTypeField do
+  it 'belongs to a item_type'
+  it 'belongs to a field'
+  it 'is a list, scoped by item_type'
+  it 'can be hidden'
+  it 'has a position'
+end
+
+describe BaseFieldMapping do
+  it 'belongs to a field'
+  it 'belongs to a base_field'
+  it 'belongs to an item_type'
+end
+
+describe CreatorType do
+  it 'has a name'
+  it 'has item_type_creator_types'
+  it 'has item_creators'
+  it 'has creators'
+end
+
+describe ItemTypeCreatorType do
+  it 'belongs to a item_type'
+  it 'belongs to a creator type'
+  it 'can be a primary creator type'
+end
+
+#
+# User 
+#
+
+describe Item do
+  it 'knows when it was created/modified'
+  it 'belongs to an item_type'
+  it 'has many item_datas'
+  it 'has many values'
+  it 'has many item_creators'
+  it 'has many creators'
+  it 'gets and sets field values with a dot notation'
+end
+
+describe ItemDataValue do
+  it 'has a value'
+  it 'has item-datas'
+end
+
+describe ItemData do
+  it 'belongs to an item'
+  it 'belongs to a field'
+  it 'belongs to a item_data_value'
+end
+
+describe CreatorData do
+  it 'is creatable'
+end
+
+describe Creator do
+  it 'belongs to creator_data'
+  it 'builds a creator data for you'
+  it 'sets a unique key before being created'
+  it 'knows when it was created/modified'
+end
+
+describe ItemCreator do
+  it 'belongs to a item'
+  it 'belongs to a creator'
+  it 'belongs to a creator_type'
+  it 'is a list, scoped by items'
+  it 'has a position'
+end
+
+describe ItemNote do
+  it 'belongs to an item'
+  it 'is creatable'
+end

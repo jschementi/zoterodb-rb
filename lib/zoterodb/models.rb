@@ -252,7 +252,9 @@ module ZoteroDB::Models
         # Typecast the value being set
         data_value = if field.respond_to?(:field_type)
           if property
-            _type = data ? field.field_type.new(data.value.value) : field.field_type.new
+            _type = data ? 
+              field.field_type.new(data.value.value) : 
+              field.field_type.new
             _type.send("#{property}=", args.first)
             _type
           else

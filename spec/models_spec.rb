@@ -110,25 +110,42 @@ describe Field do
     @f1, _, @itf1, _ = add_fields(itemdata)
     @id = add_item_data(itemdata, @f1)
   end
-  
+
   it 'is creatable' do
     @f1.new_record?.should == false
     @f1.name.should == 'field1'
     @f1.id.kind_of?(Integer).class == Integer
   end
-  
+
   it 'has item-type fields' do
     @f1.item_type_fields.size.should == 1
     @f1.item_type_fields[0].should == @itf1
   end
-  
+
   it 'has item-types' do
     @f1.item_types.size.should == 1
     @f1.item_types[0].should == @itf1.item_type
   end
-  
+
   it 'has item_datas' do
     @f1.item_datas.size.should == 1
     @f1.item_datas[0].should == @id
+  end
+
+  it 'has values' do
+    @f1.values.size.should == 1
+    @f1.values[0].value.should == 'FieldValue'
+  end
+
+  it 'has a real name for type and repository' do
+    Field.real_name('___type').should == 'type'
+    Field.real_name('___repository').should == 'repository'
+    Field.real_name('___doesnotexist').should be_nil
+  end
+
+  it 'has a safe name for type and repository' do
+    Field.new(:name => 'type').safe_name.should == '___type'
+    Field.new(:name => 'repository').safe_name.should == '___repository'
+    Field.new(:name => 'doesnotexist').safe_name.should == 'doesnotexist'
   end
 end

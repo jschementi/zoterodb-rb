@@ -34,14 +34,13 @@ module ZoteroDB::Models
     property :display, Enum[:hide, :display, :primary], :default => :display
 
     has n, :item_type_fields, :order => ['position']
-    
-    # TODO: though item_type_fields is sorted by position, the fields aren't
-    # when using the below commented out line.
-    #has n, :fields, :through => :item_type_fields
     def fields
       item_type_fields.map{|itf| itf.field}
     end
-    
+    # TODO: though item_type_fields is sorted by position, the fields aren't
+    # when using the below commented out line.
+    #has n, :fields, :through => :item_type_fields
+
     has n, :base_field_mappings
     def base_fields
       fields - 
@@ -88,8 +87,13 @@ module ZoteroDB::Models
     #property :field_format_id, Integer, :field => 'fieldFormatID'
     #belongs_to :field_formats
 
-    has n, :item_type_fields
-    has n, :item_types, :through => :item_type_fields
+    has n, :item_type_fields, :order => ['position']
+    def item_types
+      item_type_fields.map{|itf| itf.item_type}
+    end
+    # TODO: though item_type_fields is sorted by position, the fields aren't
+    # when using the below commented out line.
+    #has n, :item_types, :through => :item_type_fields
 
     repository(:default) do
       has n, :item_datas

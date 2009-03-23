@@ -206,7 +206,7 @@ module ZoteroDB::Models
     end
 
     has n, :item_creators
-    has n, :creators, :through => :item_creators, :mutable => true
+    has n, :creators, :through => :item_creators
 
     def method_missing(m, *args)
       # Figure out if this is a setter or a getter
@@ -303,12 +303,15 @@ module ZoteroDB::Models
 
     property :item_id, Integer, :field => 'itemID', :key => true
     property :field_id, Integer, :field => 'fieldID', :key => true
-    property :value_id, Integer, :field => 'valueID', :key => true
+    property :item_data_value_id, Integer, :field => 'valueID', :key => true
 
     belongs_to :item
     belongs_to :field
-    belongs_to :value, 
-      :class_name => "ItemDataValue", :child_key => [:value_id]
+    belongs_to :item_data_value
+
+    def value
+      item_data_value
+    end
   end
 
   class CreatorData
@@ -319,8 +322,10 @@ module ZoteroDB::Models
     property :first_name, Text, :field => 'firstName'
     property :middle_name, Text, :field => 'shortName'
     property :last_name, Text, :field => 'lastName'
-    property :mode, Integer, :field => "fieldMode"
+    property :mode, Integer, :field => "fieldMode", :default => 0
     property :birth_year, Integer, :field => 'birthYear'
+
+    has n, :creators
   end
 
   class Creator
@@ -328,21 +333,27 @@ module ZoteroDB::Models
     storage_names[:default] = 'creators'
 
     property :id, Serial, :field => 'creatorID'
-    property :creator_data_id, Integer, :field => 'creatorDataID', :key => true
+    property :creator_data_id, Integer, :field => 'creatorDataID'
     property :created_at, DateTime, :field => 'dateAdded'
     property :updated_at, DateTime, :field => 'dateModified'
-    property :key, Text
+    property :unique_key, Text, :field => 'key'
 
     before(:create) do
-      while self.key.nil? || Creator.first(:key => self.key)
-        self.key = Digest::SHA1.hexdigest("--#{Time.now}--")
+      while self.unique_key.nil? || Creator.first(:unique_key => self.unique_key)
+        self.unique_key = Digest::SHA1.hexdigest("--#{Time.now}--")
       end
     end
 
     belongs_to :creator_data
 
+    has n, :item_creators
+
     def self.build_with_data(last, first, middle = nil)
-      data_opts      = {:first_name => first, :middle_name => middle, :last_name => last}
+      data_opts      = {
+        :first_name => first,
+        :middle_name => middle,
+        :last_name => last
+      }
       creator_data   = CreatorData.first(data_opts)
       creator_data ||= CreatorData.create(data_opts)
       creator_opts   = {:creator_data_id => creator_data.id}
@@ -358,14 +369,20 @@ module ZoteroDB::Models
 
     property :item_id, Integer, :field => 'itemID', :key => true
     property :creator_id, Integer, :field => 'creatorID', :key => true
-    property :creator_type_id, Integer, 
-      :field => 'creatorTypeID', :default => 1, :key => true
-    property :position, Integer, :field => 'orderIndex', :key => true
+    property :creator_type_id, Integer, :field => 'creatorTypeID', :key => true
+    property :position, Integer, :field => 'orderIndex'
 
     is :list, :scope => [:item_id]
 
     belongs_to :item
     belongs_to :creator
+
+    before(:save) do
+      if self.creator_type_id.nil?
+        ct = CreatorType.first(:name => 'author')
+        self.creator_type_id = ct.id unless ct.nil?
+      end
+    end
 
     repository(SYSTEM_REPOSITORY) do
       belongs_to :creator_type
@@ -380,5 +397,7 @@ module ZoteroDB::Models
     property :item_id, Integer, :field => 'sourceItemID'
     property :note, Text
     property :title, Text
+    
+    belongs_to :item
   end
 end

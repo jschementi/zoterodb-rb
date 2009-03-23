@@ -136,6 +136,13 @@ describe ItemType do
     add_creator_types(@it)
     @it.all_fields.should == (@it.fields + @it.creator_types)
   end
+  
+  it 'has items' do
+    Item.create :item_type_id => @it.id
+    Item.create :item_type_id => @it.id
+    Item.create :item_type_id => @it.id
+    @it.items.size.should == 3
+  end
 end
 
 describe Field do
@@ -391,7 +398,11 @@ describe ItemData do
   end
   
   it 'belongs to a item_data_value' do
-    @id.value.kind_of?(ItemDataValue).should be_true
+    @id.item_data_value.kind_of?(ItemDataValue).should be_true
+  end
+  
+  it 'has a value' do
+    @id.value.should == @id.item_data_value
   end
 end
 
@@ -404,6 +415,7 @@ describe CreatorData do
       :middle_name => "Marie",
       :birth_year => 1986
     })
+    @c = Creator.create(:creator_data_id => @cd.id)
   end
   
   it 'is creatable' do
@@ -415,6 +427,10 @@ describe CreatorData do
     @cd.mode = 1
     @cd.save.should be_true
     @cd.mode.should == 1
+  end
+  
+  it 'has creators' do
+    @cd.creators[0].should == @c
   end
 end
 
@@ -512,6 +528,12 @@ describe ItemCreator do
   it 'has a position' do
     @ic.position.should == 1
   end
+  
+  it 'defaults to *author* as the creator-type' do
+    ic = ItemCreator.create :item_id => @i.id, 
+      :creator_id => Creator.build_with_data("Bar", "Foo").id
+    ic.creator_type.name.should == 'author'
+  end
 end
 
 describe ItemNote do
@@ -520,6 +542,12 @@ describe ItemNote do
     itemtype = ItemType.create :name => 'foo'
     @item = Item.create :item_type_id => itemtype.id
     @note = ItemNote.create :item_id => @item.id
+  end
+
+  it 'is creatable' do
+    note = ItemNote.create :item_id => @item.id, 
+      :title => "hi", :note => 'bye'
+    note.new_record?.should be_false
   end
 
   it 'belongs to an item' do

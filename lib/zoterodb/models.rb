@@ -208,6 +208,7 @@ module ZoteroDB::Models
     has n, :item_creators
     has n, :creators, :through => :item_creators
 
+    # TODO: spec me!
     def method_missing(m, *args)
       # Figure out if this is a setter or a getter
       setter = false
@@ -377,7 +378,9 @@ module ZoteroDB::Models
     belongs_to :item
     belongs_to :creator
 
-    before(:save) do
+    before :valid?, :set_default_creator_type
+  
+    def set_default_creator_type(context = :default)
       if self.creator_type_id.nil?
         ct = CreatorType.first(:name => 'author')
         self.creator_type_id = ct.id unless ct.nil?

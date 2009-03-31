@@ -47,11 +47,11 @@ def add_item_data(item_type_or_item, field)
   ]
 end
 
-def add_item_creator(item, creator_data)
+def add_item_creator(item, type_name, creator_data)
   creator = Creator.create(
     :creator_data_id => CreatorData.create(creator_data).id
   )
-  creator_type = CreatorType.create :name => 'author1'
+  creator_type = CreatorType.first :name => type_name
   [
     ItemCreator.create(
       :item_id => item.id, 
@@ -260,7 +260,7 @@ describe CreatorType do
     @it = ItemType.create :name => 'bar'
     @ct1, @ct2, @itct1, @itct2 = add_creator_types(@it)
     @i = Item.create :item_type_id => @it.id
-    @ic, @c, @ct = add_item_creator(@i,
+    @ic, @c, @ct = add_item_creator(@i, 'author',
       :first_name => "Jimmy",
       :middle_name => "Michael",
       :last_name => "Schementi"
@@ -323,7 +323,8 @@ describe Item do
     @f1, @f2, @itf1, @itf2 = add_fields(@it)
     @i = Item.create :item_type_id => @it.id
     @id, _ = add_item_data(@i, @f1)
-    @ic, _, _ = add_item_creator(@i, {
+    add_creator_types(@it)
+    @ic, _, _ = add_item_creator(@i, 'author', {
       :first_name => "Jimmy",
       :middle_name => "Michael",
       :last_name => "Schementi"
@@ -358,8 +359,33 @@ describe Item do
     @i.creators.size.should == 1
     @i.creators[0].should == @ic.creator
   end
-  
-  it 'gets and sets field values with a dot notation'
+
+  it 'gets field values with a dot notation' do
+    @i.field1.class.should == FieldType::Line
+    @i.field1.to_s.should =~ /FieldValue/
+  end
+
+  it 'sets field values with a dot notation' do
+    @i.field1 = 'New Field Value'
+    @i.field1.to_s.should =~ /New Field Value/
+  end
+
+  it 'gets creator values with array indexing' do
+    @i['author'].size.should == 1
+    @i['author'].first.creator.creator_data.middle_name.should == 'Michael'
+  end
+
+  it 'sets creator values with array indexing' do
+    name = {:first => 'Michael', :middle => 'Thomas', :last => 'Schementi'}
+    @i['author'].size.should == 1
+    @i['author'] = name
+    @i['author'].last.creator.creator_data.first_name.
+      should == name[:first]
+    @i['author'].last.creator.creator_data.middle_name.
+      should == name[:middle]
+    @i['author'].last.creator.creator_data.last_name.
+      should == name[:last]
+  end
 end
 
 describe ItemDataValue do
@@ -432,6 +458,11 @@ describe CreatorData do
   it 'has creators' do
     @cd.creators[0].should == @c
   end
+  
+  it 'formats as full name' do
+    @cd.full_name.should == 'Cutrone, Felicia Marie'
+  end
+  
 end
 
 describe Creator do
@@ -474,7 +505,7 @@ describe ItemCreator do
     @it = ItemType.create :name => 'bar'
     @ct1, @ct2, @itct1, @itct2 = add_creator_types(@it)
     @i = Item.create :item_type_id => @it.id
-    @ic, @c, @ct = add_item_creator(@i,
+    @ic, @c, @ct = add_item_creator(@i, 'author',
       :first_name => "Jimmy",
       :middle_name => "Michael",
       :last_name => "Schementi"
@@ -496,24 +527,24 @@ describe ItemCreator do
   it 'is a list, scoped by items' do
     @it1 = ItemType.create :name => 'bar'
     @i1 = Item.create :item_type_id => @it1.id
-    @ic1, _, _ = add_item_creator(@i1,
+    @ic1, _, _ = add_item_creator(@i1, 'author',
       :first_name => "Jimmy",
       :middle_name => "Michael",
       :last_name => "Schementi"
     )
-    @ic2, _, _ = add_item_creator(@i1,
+    @ic2, _, _ = add_item_creator(@i1, 'author',
       :first_name => "Felicia",
       :middle_name => "Marie",
       :last_name => "Cutrone"
     )
     @it2 = ItemType.create :name => 'baz'
     @i2 = Item.create :item_type_id => @it2.id
-    @ic3, _, _ = add_item_creator(@i2,
+    @ic3, _, _ = add_item_creator(@i2, 'author',
       :first_name => "Boom",
       :middle_name => "A",
       :last_name => "Rang"
     )
-    @ic4, _, _ = add_item_creator(@i2,
+    @ic4, _, _ = add_item_creator(@i2, 'author',
       :first_name => "I",
       :middle_name => "P",
       :last_name => "Freely"

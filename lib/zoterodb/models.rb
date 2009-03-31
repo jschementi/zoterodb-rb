@@ -8,6 +8,7 @@ require 'dm-serializer'
 require 'dm-types'
 require 'dm-timestamps'
 require 'dm-is-list'
+require 'dm-validations'
 
 #
 # Data map of Zotero database
@@ -208,7 +209,35 @@ module ZoteroDB::Models
     has n, :item_creators
     has n, :creators, :through => :item_creators
 
-    # TODO: spec me!
+    # indexers to access creators
+    def [](index)
+      ct = CreatorType.first :name => index.to_s
+      itct = ItemTypeCreatorType.first(
+        :item_type_id    => self.item_type.id,
+        :creator_type_id => ct.id
+      )
+      ItemCreator.all :item_id => self.id, :creator_type_id => ct.id
+    end
+    
+    # indexers to set creators (last, first, middle)
+    def []=(index, value)
+      ct = CreatorType.first :name => index.to_s
+      itct = ItemTypeCreatorType.first(
+        :item_type_id    => self.item_type.id,
+        :creator_type_id => ct.id
+      )
+      c = Creator.build_with_data value[:last], value[:first], value[:middle]
+      opts = {
+        :item_id         => self.id,
+        :creator_id      => c.id,
+        :creator_type_id => ct.id
+      }
+      ic   = ItemCreator.first  opts
+      ic ||= ItemCreator.create opts
+      ItemCreator.all :item_id => self.id, :creator_type_id => ct.id
+    end
+
+    # get and set fields
     def method_missing(m, *args)
       # Figure out if this is a setter or a getter
       setter = false
@@ -271,10 +300,10 @@ module ZoteroDB::Models
           ItemDataValue.create(:value => data_value)
 
         unless data
-          data = ItemData.create(:field => field, :value => value,
-            :item_id => self.id)
+          data = ItemData.create(:field => field,
+            :item_data_value => value, :item_id => self.id)
         else
-          data.update_attributes(:value_id => value.id)
+          data.update_attributes(:item_data_value_id => value.id)
         end
       end
 
@@ -327,6 +356,10 @@ module ZoteroDB::Models
     property :birth_year, Integer, :field => 'birthYear'
 
     has n, :creators
+    
+    def full_name
+      "#{last_name}, #{first_name}#{ " #{middle_name}" if middle_name }"
+    end
   end
 
   class Creator

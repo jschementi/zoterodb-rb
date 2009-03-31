@@ -46,7 +46,7 @@ module ZoteroDB
 
         # creators are seperate, so add them all to the citation
         item.item_creators.each do |ic|
-          csl.add_contributor_name ic.creator.last_name, ic.creator_type.name
+          csl.add_contributor_name ic.creator.creator_data.full_name, ic.creator_type.name
         end
 
         ary << csl

@@ -5,12 +5,12 @@ require 'zoterodb'
 include ZoteroDB::Models
 
 $full_path = File.expand_path(File.dirname(__FILE__))
-$rails_root = "#{$full_path}/../../../../"
+RAILS_ROOT = "#{$full_path}/../../../../"
 $dbfile = "#{$full_path}/db/development.db"
 
 def rebuild_database
   puts "rebuilding database"
-  FileUtils.cd $rails_root do
+  FileUtils.cd RAILS_ROOT do
     `rake dm:migrate:down`
     `rake dm:migrate:up`
   end
@@ -19,21 +19,22 @@ end
 def copy_database
   puts "copying database"
   require 'fileutils'
-  FileUtils.cp "#{$rails_root}/db/development.db", $dbfile
+  FileUtils.cp "#{RAILS_ROOT}/db/development.db", $dbfile
 end
 
 def start
   puts "Starting ..."
   DataMapper.setup :default, "sqlite3://#{$dbfile}"
 
-  $:.unshift "#{$rails_root}/app/models"
-  $:.unshift "#{$rails_root}/vendor/plugins/rails-authorization-plugin/lib"
+  $:.unshift "#{RAILS_ROOT}/app/models"
+  $:.unshift "#{RAILS_ROOT}/vendor/plugins/rails-authorization-plugin/lib"
   
   require 'authorization'
   require 'publishare/object_roles_table'
 
   require 'field'
   require 'field_type'
+  require 'style'
 
   $names = [
     "Jimmy Schementi",
@@ -81,17 +82,27 @@ end
 
 def format_items
   puts "Formatting items ...\n"
-  Item.all.each do |i|
-    puts "#{i.item_type.name} => #{ZoteroDB::Formatting.format(
-      i, :mla, :bibliography, :html
-    )}"
+  text = ''
+  Style.all.each do |s|
+    puts text = "<h1>#{s.id.upcase}</h1>"
+    Item.all.each do |i|
+      [:bibliography, :note].each do |t|
+        text = <<-EOS
+<h2>#{i.item_type.name} (#{s.id} #{t})</h2>
+#{s.format(i, t, :html)}
+        EOS
+        puts text
+      end
+    end
+    puts text = "<hr />"
   end
+  #puts text
 end
 
 if __FILE__ == $0
-  rebuild_database
-  copy_database
+  #rebuild_database
+  #copy_database
   start
-  generate_items
+  #generate_items
   format_items
 end

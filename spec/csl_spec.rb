@@ -68,4 +68,9 @@ describe ZoteroDB::Formatting do
     text = ZoteroDB::Formatting.format(@blog_post, :mla, :bibliography, :base)
     text.should == "Schementi, Jimmy. \"Blog post title\". 1st Mar 2009. 12th Mar 2009.\n"
   end
+  
+  it 'formats a citation in html' do
+    html = ZoteroDB::Formatting.format(@blog_post, :mla, :bibliography, :html)
+    html.should == "<div>Schementi, Jimmy. \"Blog post title\". 1st Mar 2009. 12th Mar 2009.</div>\n"
+  end
 end

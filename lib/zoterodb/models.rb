@@ -154,7 +154,7 @@ module ZoteroDB::Models
     storage_names[SYSTEM_REPOSITORY] = 'creatorTypes'
 
     property :id, Serial, :field => 'creatorTypeID'
-    property :name, Text, :field => 'creatorType'
+    property :name, Text, :field => 'creatorType', :lazy => false
 
     has n, :item_type_creator_types
 
@@ -202,12 +202,20 @@ module ZoteroDB::Models
     end
 
     has n, :item_datas
-    def values
-      item_datas.map{|ida| ida.value}
-    end
+    def values; item_datas.map{|ida| ida.value} end
+
+    has n, :item_notes
+    def notes; item_notes; end
+
+    has n, :item_annotations
+    def annotations; item_annotations; end
 
     has n, :item_creators
     has n, :creators, :through => :item_creators
+
+    has n, :item_tags
+    has n, :tags, :through => :item_tags
+    def tag_list; tags.map{|t| t.name}; end
 
     # indexers to access creators
     def [](index)
@@ -219,7 +227,9 @@ module ZoteroDB::Models
       ItemCreator.all :item_id => self.id, :creator_type_id => ct.id
     end
     
-    # indexers to set creators (last, first, middle)
+    # indexers to set creators
+    # index: creator type name
+    # value: Hash with keys (last, first, middle)
     def []=(index, value)
       ct = CreatorType.first :name => index.to_s
       itct = ItemTypeCreatorType.first(
@@ -433,7 +443,60 @@ module ZoteroDB::Models
     property :item_id, Integer, :field => 'sourceItemID'
     property :note, Text
     property :title, Text
-    
+
     belongs_to :item
+  end
+
+  class ItemAnnotation
+    include DataMapper::Resource
+    storage_names[:default] = 'annotations'
+
+    property :id, Serial, :field => 'annotationID'
+    property :title, Text, :field => 'parent'
+    property :value, Text, :field => 'text'
+    property :item_id, Integer, :field => 'itemID'
+
+    belongs_to :item
+  end
+
+  class Tag
+    include DataMapper::Resource
+    storage_names[:default] = 'tags'
+
+    property :id, Serial, :field => 'tagID'
+    property :name, Text, :nullable => false, :unique => true
+    property :created_at, DateTime, :field => 'dateAdded'
+    property :updated_at, DateTime, :field => 'dateModified'
+    property :unique_key, Text, :field => 'key'
+
+    before(:create) do
+      while self.unique_key.nil? || Tag.first(:unique_key => self.unique_key)
+        self.unique_key = Digest::SHA1.hexdigest("--#{Time.now}--")
+      end
+    end
+
+    has n, :item_tags
+    has n, :items, :through => :item_tags
+  end
+
+  class ItemTag
+    include DataMapper::Resource
+    storage_names[:default] = 'itemTags'
+
+    property :item_id, Integer, :field => 'itemID', :key => true
+    property :tag_id, Integer, :field => 'tagID', :key => true
+
+    belongs_to :tag
+    belongs_to :item
+
+    def self.find_or_create_tag(item_id, options)
+      t   = Tag.first options
+      t ||= Tag.create options
+      unless t.new_record?
+        create :item_id => item_id, :tag_id => t.id
+      else
+        raise Exception.new(t.errors)
+      end
+    end
   end
 end

@@ -63,6 +63,21 @@ def add_item_creator(item, type_name, creator_data)
   ]
 end
 
+def add_notes_and_annotations(item)
+  [
+    item.item_notes.create(:title => "Note 1", :note => "This is a note body"),
+    item.item_notes.create(:title => "Note 2", :note => "This is another note body"),
+    item.item_annotations.create(:title => "Annotation 1", :value => "This is another annotation body"),
+    item.item_annotations.create(:title => "Annotation 2", :value => "This is another annotation body")
+  ]
+end
+
+def add_tags(item)
+  t1 = ItemTag.find_or_create_tag item.id, :name => 'tag1'
+  t2 = ItemTag.find_or_create_tag item.id, :name => 'tag2'
+  [t1, t2]
+end
+
 describe ItemType do
   before(:each) do
     DataMapper.auto_migrate!
@@ -329,6 +344,8 @@ describe Item do
       :middle_name => "Michael",
       :last_name => "Schementi"
     })
+    @in1, @in2, @ia1, @ia2 = add_notes_and_annotations(@i)
+    @t1, @t2 = add_tags(@i)
   end
 
   it 'knows when it was created/modified' do
@@ -360,6 +377,18 @@ describe Item do
     @i.creators[0].should == @ic.creator
   end
 
+  it 'has item_tags' do
+    @i.item_tags.size.should == 2
+    @i.item_tags[0].should == @t1
+    @i.item_tags[1].should == @t2
+  end
+
+  it 'has tags' do
+    @i.tags.size.should == 2
+    @i.tags[0].should == @t1.tag
+    @i.tags[1].should == @t2.tag
+  end
+
   it 'gets field values with a dot notation' do
     @i.field1.class.should == FieldType::Line
     @i.field1.to_s.should =~ /FieldValue/
@@ -385,6 +414,14 @@ describe Item do
       should == name[:middle]
     @i['author'].last.creator.creator_data.last_name.
       should == name[:last]
+  end
+
+  it 'has notes' do
+    @i.notes.should == [@in1, @in2]
+  end
+
+  it 'has annotations' do
+    @i.annotations.should == [@ia1, @ia2]
   end
 end
 
@@ -584,4 +621,13 @@ describe ItemNote do
   it 'belongs to an item' do
     @note.item.should == @item
   end
+end
+
+describe ItemAnnotation do
+end
+
+describe Tag do
+end
+
+describe ItemTag do
 end

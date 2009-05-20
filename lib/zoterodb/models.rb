@@ -215,7 +215,9 @@ module ZoteroDB::Models
 
     has n, :item_tags
     has n, :tags, :through => :item_tags
-    def tag_list; tags.map{|t| t.name}; end
+    def tag_list
+      tags.map{|t| t.name}.join(", ")
+    end
 
     # indexers to access creators
     def [](index)
@@ -464,15 +466,17 @@ module ZoteroDB::Models
     storage_names[:default] = 'tags'
 
     property :id, Serial, :field => 'tagID'
-    property :name, Text, :nullable => false, :unique => true
+    property :name, Text, :nullable => false, :unique => true, :lazy => false
     property :created_at, DateTime, :field => 'dateAdded'
     property :updated_at, DateTime, :field => 'dateModified'
     property :unique_key, Text, :field => 'key'
+    property :ttype, Integer, :field => 'type', :nullable => false
 
     before(:create) do
       while self.unique_key.nil? || Tag.first(:unique_key => self.unique_key)
         self.unique_key = Digest::SHA1.hexdigest("--#{Time.now}--")
       end
+      self.ttype ||= 0
     end
 
     has n, :item_tags
@@ -490,6 +494,7 @@ module ZoteroDB::Models
     belongs_to :item
 
     def self.find_or_create_tag(item_id, options)
+      options = {:ttype => 0}.merge(options) # Zotero requires a itemTags.type field
       t   = Tag.first options
       t ||= Tag.create options
       unless t.new_record?

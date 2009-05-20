@@ -205,10 +205,10 @@ module ZoteroDB::Models
     def values; item_datas.map{|ida| ida.value} end
 
     has n, :item_notes
-    def notes; item_notes; end
+    def notes; item_notes.map{|n| n.note}.join('\n'); end
 
     has n, :item_annotations
-    def annotations; item_annotations; end
+    def annotations; item_annotations.map{|n| n.value}.join('\n'); end
 
     has n, :item_creators
     has n, :creators, :through => :item_creators

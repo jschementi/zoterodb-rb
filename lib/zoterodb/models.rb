@@ -10,6 +10,9 @@ require 'dm-timestamps'
 require 'dm-is-list'
 require 'dm-validations'
 
+require 'fileutils'
+require 'ftools'
+
 #
 # Data map of Zotero database
 #
@@ -205,10 +208,10 @@ module ZoteroDB::Models
     def values; item_datas.map{|ida| ida.value} end
 
     has n, :item_notes
-    def notes; item_notes.map{|n| n.note}.join('\n'); end
+    def notes; item_notes.map{|n| n.note}.join("\n\n"); end
 
     has n, :item_annotations
-    def annotations; item_annotations.map{|n| n.value}.join('\n'); end
+    def annotations; item_annotations.map{|n| n.value}.join("\n\n"); end
 
     has n, :item_creators
     has n, :creators, :through => :item_creators
@@ -218,6 +221,8 @@ module ZoteroDB::Models
     def tag_list
       tags.map{|t| t.name}.join(", ")
     end
+
+    has n, :item_attachments
 
     # indexers to access creators
     def [](index)
@@ -503,5 +508,69 @@ module ZoteroDB::Models
         raise Exception.new(t.errors)
       end
     end
+  end
+
+  class ItemAttachment
+    include DataMapper::Resource
+    storage_names[:default] = 'itemAttachments'
+
+    property :id, Serial, :field => 'itemID'
+    property :item_id, Integer, :field => 'sourceItemID'
+    property :mime_type, String, :field => 'mimeType'
+    property :path, Text
+    property :original_path, Text, :field => 'originalPath'
+
+    belongs_to :item
+
+    def self.storage_path
+      @storage_path
+    end
+    def self.storage_path=(value)
+      @storage_path = value
+    end
+    self.storage_path = File.expand_path(File.join(
+      defined?(RAILS_ROOT) ?
+        RAILS_ROOT :
+        File.join(File.dirname(__FILE__), '..', '..'),
+      'db', 'item_attachments'
+    ))
+
+    def filename
+      File.basename path
+    end
+
+    def real_path
+      File.join(
+        File.expand_path(self.class.storage_path),
+        partitioned_path, 
+        self.filename
+      )
+    end
+
+    def self.create_and_store(options)
+      upload = options[:uploaded_data]
+      item = Item.get(options[:item_id] || options[:reference_id])
+      ia = create(
+        :item_id => item.id,
+        :mime_type => upload.content_type,
+        :path => File.basename(upload.original_filename),
+        :original_path => upload.original_path
+      )
+      ia.store(upload)
+      ia
+    end
+
+    def store(upload)
+      path = File.dirname self.real_path
+      File.makedirs(path)
+      FileUtils.mv(upload.local_path, self.real_path)
+    end
+
+    private
+
+      # Partition the path according to the id
+      def partitioned_path
+        ("%06d" % self.id).scan(/.../)
+      end
   end
 end

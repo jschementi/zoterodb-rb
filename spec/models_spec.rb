@@ -417,11 +417,11 @@ describe Item do
   end
 
   it 'has notes' do
-    @i.notes.should == [@in1, @in2]
+    @i.notes.should == "#{@in1.note}\n\n#{@in2.note}"
   end
 
   it 'has annotations' do
-    @i.annotations.should == [@ia1, @ia2]
+    @i.annotations.should == "#{@ia1.value}\n\n#{@ia2.value}"
   end
 end
 
@@ -609,13 +609,11 @@ describe ItemNote do
     DataMapper.auto_migrate!
     itemtype = ItemType.create :name => 'foo'
     @item = Item.create :item_type_id => itemtype.id
-    @note = ItemNote.create :item_id => @item.id
+    @note = ItemNote.create :item_id => @item.id, :title => "hi", :note => 'bye'
   end
 
   it 'is creatable' do
-    note = ItemNote.create :item_id => @item.id, 
-      :title => "hi", :note => 'bye'
-    note.new_record?.should be_false
+    @note.new_record?.should be_false
   end
 
   it 'belongs to an item' do
@@ -630,4 +628,71 @@ describe Tag do
 end
 
 describe ItemTag do
+end
+
+describe ItemAttachment do
+  before(:each) do
+    DataMapper.auto_migrate!
+    it = ItemType.create :name => 'foo'
+    @i = Item.create :item_type_id => it.id
+    @a = ItemAttachment.create :item_id => @i.id, 
+      :mime_type => 'image/jpeg',
+      :size => 10000,
+      :path => 'db/item_attachments/foo.jpg', 
+      :original_path => 'foo.jpg'
+  end
+
+  it 'is creatable' do
+    @a.new_record?.should be_false
+  end
+
+  it 'belongs to an item' do
+    @a.item.should == @i
+  end
+
+  it 'has a filename' do
+    @a.filename.should == File.basename(@a.path)
+  end
+
+  it 'has a default storage path' do
+    ItemAttachment.storage_path.should == if defined? RAILS_ROOT
+      File.expand_path(File.join(RAILS_ROOT, 'db', 'item_attachments'))
+    else
+      File.expand_path(File.join(File.dirname(__FILE__), '..', 'db', 'item_attachments'))
+    end
+  end
+
+  it 'can set storage path' do
+    new_store = File.expand_path(File.join(File.dirname(__FILE__), 'store'))
+    ItemAttachment.storage_path = new_store
+    ItemAttachment.storage_path.should == new_store
+  end
+
+  it 'has a real path' do
+    @a.real_path.should == File.join(
+      ItemAttachment.storage_path,
+      ("%06d" % @a.id).scan(/.../),
+      @a.filename
+    )
+  end
+
+  it 'saves a file' do
+    ItemAttachment.storage_path = File.join File.dirname(__FILE__), 'store'
+    tmp = File.join File.dirname(__FILE__), 'tmp.jpg'
+    File.delete(tmp) if File.exist?(tmp)
+    File.open(tmp, 'w'){ |f| f.write 'Hello!' }
+
+    f = mock("TempFile", :mime_type => 'image/jpeg', :size => 6, 
+      :original_filename => tmp, :original_path => tmp, :local_path => tmp)
+
+    ia = ItemAttachment.create_and_store(:uploaded_data => f, :item_id => @i.id)
+
+    File.exist?(ia.real_path).should be_true
+    File.open(ia.real_path, 'r'){ |f| f.read }.should == 'Hello!'
+
+    ia.original_path.should == tmp
+    ia.path.should == File.basename(tmp)
+    
+    File.delete(tmp) if File.exist?(tmp)
+  end
 end

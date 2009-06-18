@@ -37,6 +37,12 @@ module ZoteroDB::Models
     property :name, String, :field => 'typeName'
     property :display, Enum[:hide, :display, :primary], :default => :display
 
+    def self.int_to_display(int_value)
+      return :hide if int_value == 0
+      return :display if int_value == 1
+      return :primary if int_value == 2
+    end
+
     has n, :item_type_fields, :order => ['position']
     def fields
       item_type_fields.map{|itf| itf.field}

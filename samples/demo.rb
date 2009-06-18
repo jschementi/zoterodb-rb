@@ -106,9 +106,9 @@ def render_item(i, file)
   output file, "    </div>\n"
 end
 
-def format_items(f)
+def format_items(f, style)
   puts "Formatting items ..."
-  [Style.find('mla')].each do |s|
+  [Style.find(style)].compact.each do |s|
     output f, "  <h1>#{s.id.upcase}</h1>\n"
     Item.all.each do |i|
       output f, "    <h2>#{i.item_type.display_name}</h2>\n"
@@ -133,11 +133,13 @@ end
 $actions = {
   :init => lambda { start },
   :test => lambda do
-    f = File.open(File.dirname(__FILE__) + '/demo.html', 'w') if $actions[:output?][]
-    output f, "<html>\n  <head>\n    <title>MLA</title>\n  </head>\n  <body>\n"
-    format_items(f)
-    output f, "  </body>\n</html>\n"
-    f.close if f
+    ['mla', 'apa', 'ieee'].each do |style|
+      f = File.open(File.dirname(__FILE__) + "/#{style}-demo.html", 'w') if $actions[:output?][]
+      output f, "<html>\n  <head>\n    <title>#{style.upcase}</title>\n  </head>\n  <body>\n"
+      format_items(f, style)
+      output f, "  </body>\n</html>\n"
+      f.close if f
+    end
   end,
   :rebuild => lambda do
     if $actions[:rebuild?][]

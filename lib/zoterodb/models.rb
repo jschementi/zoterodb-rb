@@ -232,23 +232,17 @@ module ZoteroDB::Models
 
     # indexers to access creators
     def [](index)
-      ct = CreatorType.first :name => index.to_s
-      itct = ItemTypeCreatorType.first(
-        :item_type_id    => self.item_type.id,
-        :creator_type_id => ct.id
-      )
+      ct, _ = check_creator_type(index, self.item_type)
       ItemCreator.all :item_id => self.id, :creator_type_id => ct.id
     end
     
     # indexers to set creators
     # index: creator type name
     # value: Hash with keys (last, first, middle)
+    # TODO: should this really just be an indexer?
+    # How about appending? How do I remove a creator?
     def []=(index, value)
-      ct = CreatorType.first :name => index.to_s
-      itct = ItemTypeCreatorType.first(
-        :item_type_id    => self.item_type.id,
-        :creator_type_id => ct.id
-      )
+      ct, _ = check_creator_type(index, self.item_type)
       c = Creator.build_with_data value[:last], value[:first], value[:middle]
       opts = {
         :item_id         => self.id,
@@ -261,6 +255,8 @@ module ZoteroDB::Models
     end
 
     # get and set fields
+    # TODO: Clean this method up, it's way too big. Why wasn't it this big
+    # with the old models?
     def method_missing(m, *args)
       # Figure out if this is a setter or a getter
       setter = false
@@ -338,6 +334,18 @@ module ZoteroDB::Models
         data.value.value
       end
     end
+    
+    private
+      def check_creator_type(index, item_type)
+        ct = CreatorType.first :name => index.to_s
+        raise "Creator Type \"#{index}\" doesn't exist" unless ct
+        itct = ItemTypeCreatorType.first(
+          :item_type_id    => item_type.id,
+          :creator_type_id => ct.id
+        )
+        raise "Creator Type \"#{index}\" is not valid for a #{item_type.name}" unless itct
+        [ct, itct]
+      end
   end
 
   class ItemDataValue
@@ -406,6 +414,9 @@ module ZoteroDB::Models
     has n, :item_creators
 
     def self.build_with_data(last, first, middle = nil)
+      last   = nil if last.blank?
+      first  = nil if first.blank?
+      middle = nil if middle.blank?
       data_opts      = {
         :first_name => first,
         :middle_name => middle,
@@ -578,5 +589,39 @@ module ZoteroDB::Models
       def partitioned_path
         ("%06d" % self.id).scan(/.../)
       end
+  end
+
+  class Project
+    include DataMapper::Resource
+    storage_names[:default] = 'collections'
+
+    property :id, Serial, :field => 'collectionID'
+    property :name, String, :field => 'collectionName'
+    property :project_id, Integer, :field => 'parentCollectionID'
+    property :created_at, DateTime, :field => 'dateAdded'
+    property :updated_at, DateTime, :field => 'dateModified'
+    property :unique_key, Text, :field => 'key'
+
+    before(:create) do
+      while self.unique_key.nil? || Project.first(:unique_key => self.unique_key)
+        self.unique_key = Digest::SHA1.hexdigest("--#{Time.now}--")
+      end
+    end
+
+    belongs_to :project
+  end
+  
+  class ProjectItem
+    include DataMapper::Resource
+    storage_names[:default] = 'collectionItems'
+
+    property :project_id, Integer, :field => 'collectionID', :key => true
+    property :item_id, Integer, :field => 'itemID', :key => true
+    property :position, Integer, :field => 'orderIndex'
+
+    is :list, :scope => [:project_id]
+
+    belongs_to :project
+    belongs_to :item
   end
 end

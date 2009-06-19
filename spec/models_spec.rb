@@ -637,7 +637,6 @@ describe ItemAttachment do
     @i = Item.create :item_type_id => it.id
     @a = ItemAttachment.create :item_id => @i.id, 
       :mime_type => 'image/jpeg',
-      :size => 10000,
       :path => 'db/item_attachments/foo.jpg', 
       :original_path => 'foo.jpg'
   end
@@ -683,7 +682,8 @@ describe ItemAttachment do
     File.open(tmp, 'w'){ |f| f.write 'Hello!' }
 
     f = mock("TempFile", :mime_type => 'image/jpeg', :size => 6, 
-      :original_filename => tmp, :original_path => tmp, :local_path => tmp)
+      :original_filename => tmp, :original_path => tmp, :local_path => tmp,
+      :content_type => 'image/jpeg')
 
     ia = ItemAttachment.create_and_store(:uploaded_data => f, :item_id => @i.id)
 
@@ -694,5 +694,42 @@ describe ItemAttachment do
     ia.path.should == File.basename(tmp)
     
     File.delete(tmp) if File.exist?(tmp)
+  end
+end
+
+describe Project do
+  before(:each) do
+    DataMapper.auto_migrate!
+    @c = Project.create :name => 'My Collection'
+  end
+
+  it 'is creatable' do
+    @c.new_record?.should be_false
+  end
+end
+
+describe ProjectItem do
+  before(:each) do
+    DataMapper.auto_migrate!
+    it = ItemType.create :name => 'foo'
+    @i = Item.create :item_type_id => it.id
+    @c = Project.create :name => 'My Collection'
+    @ci = ProjectItem.create :project_id => @c.id, :item_id => @i.id
+  end
+
+  it 'is creatable' do
+    @ci.new_record?.should be_false
+  end
+
+  it 'belongs to a project' do
+    @ci.project.should == @c
+  end
+
+  it 'belongs to a item' do 
+    @ci.item.should == @i
+  end
+
+  it 'is a list' do
+    @ci.position.should == 1
   end
 end

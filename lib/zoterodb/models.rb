@@ -230,6 +230,9 @@ module ZoteroDB::Models
 
     has n, :item_attachments
 
+    has n, :project_items
+    has n, :projects, :through => :project_items
+
     # indexers to access creators
     def [](index)
       ct, _ = check_creator_type(index, self.item_type)
@@ -609,6 +612,7 @@ module ZoteroDB::Models
     end
 
     belongs_to :project
+    has n, :project_items
   end
   
   class ProjectItem

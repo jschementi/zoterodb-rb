@@ -5,8 +5,8 @@ require 'zoterodb'
 include ZoteroDB::Models
 
 $full_path = File.expand_path(File.dirname(__FILE__))
-RAILS_ROOT = "#{$full_path}/../../../../"
 $dbfile = "#{$full_path}/db/development.db"
+RAILS_ROOT = "#{$full_path}/../../../../"
 
 def rebuild_database
   puts "rebuilding database"
@@ -110,7 +110,7 @@ def format_items(f, style)
   puts "Formatting items ..."
   [Style.find(style)].compact.each do |s|
     output f, "  <h1>#{s.id.upcase}</h1>\n"
-    Item.all.each do |i|
+    Item.all.sort{|x,y| x.item_type.name <=> y.item_type.name}.each do |i|
       output f, "    <h2>#{i.item_type.display_name}</h2>\n"
       render_item(i, f)
       output f, "    <div style='border-left: 10px solid lightgray; padding-left: 10px'>\n"

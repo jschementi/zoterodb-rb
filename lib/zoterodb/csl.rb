@@ -12,6 +12,12 @@ require 'map'
 module ZoteroDB
   
   class Formatting
+    
+    def self.format_with_js(items, style, type = :bibliography, format = :html)
+      items_as_string = items.to_json.to_s
+      `python #{File.dirname(__FILE__)}/csl.py #{style} #{type} #{items_as_string}`
+    end
+
     #
     # Convert item(s) into a CSL citation(s)
     #
@@ -70,7 +76,7 @@ module ZoteroDB
 
       style = Citeproc::CslParser.new(
         File.dirname(__FILE__) +
-        "/../xbiblio/citeproc-rb/data/styles/#{style.to_s.downcase}.csl"
+        "/../../../citeproc-rb/data/styles/#{style.to_s.downcase}.csl"
       ).style
 
       processor = Citeproc::CslProcessor.new

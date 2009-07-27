@@ -36,6 +36,13 @@ module ZoteroDB::Models
     property :id, Serial, :field => 'itemTypeID'
     property :name, String, :field => 'typeName'
     property :display, Enum[:hide, :display, :primary], :default => :display
+    
+    class << self
+      alias dm_all all
+      def all(args = {})
+        dm_all(args.merge :display.not => :hide)
+      end
+    end
 
     def self.int_to_display(int_value)
       return :hide if int_value == 0
@@ -390,9 +397,13 @@ module ZoteroDB::Models
     property :birth_year, Integer, :field => 'birthYear'
 
     has n, :creators
-    
-    def full_name
-      "#{last_name}, #{first_name}#{ " #{middle_name}" if middle_name }"
+
+    def full_name(options = {})
+      if options[:first_name_first]
+        "#{first_name}#{ " #{middle_name[0..0].upcase}." if middle_name } #{last_name}"
+      else
+        "#{last_name}, #{first_name}#{ " #{middle_name[0..0].upcase}." if middle_name }"
+      end
     end
   end
 

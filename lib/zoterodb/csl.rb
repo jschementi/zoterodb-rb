@@ -10,58 +10,20 @@ require 'models'
 require 'map'
 
 module ZoteroDB
-  
+
   class Formatting
-    
+
+    #
+    # Format item(s) with citeproc-js
+    #
     def self.format_with_js(items, style, type = :bibliography, format = :html)
-      items_as_string = items.to_json.to_s
-      `python #{File.dirname(__FILE__)}/csl.py #{style} #{type} #{items_as_string}`
+      items = [items] unless items.kind_of? Array
+      items_as_string = items_to_citations(items).to_json
+      `python #{File.dirname(__FILE__)}/csl.py #{style} #{type} '#{items_as_string}'`
     end
 
     #
-    # Convert item(s) into a CSL citation(s)
-    #
-    def self.items_to_citations(items)
-      csls = [items].flatten.inject([]) do |ary, item|
-        csl = nil
-        csl = CSL::Citation.new
-        csl.type = TYPE_MAP[item.item_type.name] || item.item_type.name
-
-        # look at the base types, as the real types can just be a facade
-        item.item_type.fields.each do |f|
-
-          # Use the field_map table to find a name for the field that the
-          # citation can use. If that field isn't in the table, just use
-          # it's current name. Note that one item field can set multiple
-          # citation fields.
-          csl_field = FIELD_MAP[f.name]
-          base_field_map = item.item_type.base_field_mappings.
-            first('field.name' => f.name) unless csl_field
-          csl_name = nil
-          csl_name ||= base_field_map.base_field.name if base_field_map
-          csl_name ||= f.name unless csl_field
-          csl_name ||= csl_field
-
-          [csl_name].flatten.compact.each do |v|
-            # transform the CSL variable to match what Citeproc calls it
-            v = CSL::Citation.transform_variable(v)
-            csl.send("#{v}=", item.send(f.name)) if csl.respond_to? v
-          end
-
-        end
-
-        # creators are seperate, so add them all to the citation
-        item.item_creators.each do |ic|
-          csl.add_contributor_name ic.creator.creator_data.full_name, ic.creator_type.name
-        end
-
-        ary << csl
-      end
-      items.kind_of?(Array) ? csls : csls.first
-    end
-
-    #
-    # Format item(s) in a CSL style
+    # Format item(s) with citeproc-rb
     #
     def self.format(items, style, type = :bibliography, format = :html)
       type = :citation if type == :note
@@ -92,6 +54,48 @@ module ZoteroDB
       nodes = processor.send("process_#{type}", input_filter, style, nil)
       formatter.format(nodes)
     end
+
+    private
+      #
+      # Convert item(s) into a CSL citation(s)
+      #
+      def self.items_to_citations(items)
+        csls = [items].flatten.inject([]) do |ary, item|
+          csl = nil
+          csl = {}
+          csl['id'] = item.id
+          csl['type'] = TYPE_MAP[item.item_type.name] || item.item_type.name
+
+          # look at the base types, as the real types can just be a facade
+          item.item_type.fields.each do |f|
+
+            # Use the field_map table to find a name for the field that the
+            # citation can use. If that field isn't in the table, just use
+            # it's current name. Note that one item field can set multiple
+            # citation fields.
+            csl_field = FIELD_MAP[f.name]
+            base_field_map = item.item_type.base_field_mappings.
+              first('field.name' => f.name) unless csl_field
+            csl_name = nil
+            csl_name ||= base_field_map.base_field.name if base_field_map
+            csl_name ||= f.name unless csl_field
+            csl_name ||= csl_field
+
+            [csl_name].flatten.compact.each do |v|
+              csl[v] = item.send(f.name)
+            end
+          end
+
+          # creators are seperate, so add them all to the citation
+          item.item_creators.each do |ic|
+            csl[ic.creator_type.name] ||= []
+            creator = {'name' => ic.creator.creator_data.full_name}
+            csl[ic.creator_type.name] << creator
+          end
+
+          ary << csl
+        end
+        items.kind_of?(Array) ? csls : csls.first
+      end
   end
-  
 end

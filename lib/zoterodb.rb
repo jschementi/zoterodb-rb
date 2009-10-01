@@ -44,7 +44,7 @@ module ZoteroDB::Models
     class << self
       alias dm_all all
       def all(args = {})
-        dm_all(args.merge :display.not => :hide)
+        dm_all(args.merge(:display.not => :hide))
       end
     end
 

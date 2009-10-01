@@ -497,7 +497,7 @@ describe CreatorData do
   end
   
   it 'formats as full name' do
-    @cd.full_name.should == 'Cutrone, Felicia Marie'
+    @cd.full_name.should == 'Cutrone, Felicia M.'
   end
   
 end

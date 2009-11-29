@@ -193,18 +193,6 @@ describe Field do
     @f1.values.size.should == 1
     (@f1.values[0].value =~ /FieldValue/).should_not be_nil
   end
-
-  it 'has a real name for type and repository' do
-    Field.real_name('___type').should == 'type'
-    Field.real_name('___repository').should == 'repository'
-    Field.real_name('___doesnotexist').should be_nil
-  end
-
-  it 'has a safe name for type and repository' do
-    Field.new(:name => 'type').safe_name.should == '___type'
-    Field.new(:name => 'repository').safe_name.should == '___repository'
-    Field.new(:name => 'doesnotexist').safe_name.should == 'doesnotexist'
-  end
 end
 
 describe ItemTypeField do

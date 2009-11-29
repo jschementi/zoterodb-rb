@@ -69,6 +69,13 @@ module ZoteroDB::Models
         base_field_mappings.map{|bf| bf.base_field}
     end
 
+    def get_field_from_base(field)
+      return nil unless field
+      bfm = base_field_mappings.first(:base_field_id => field.id)
+      return bfm.field if bfm
+      field
+    end
+
     has n, :item_type_creator_types
     has n, :creator_types, :through => :item_type_creator_types
 
@@ -83,18 +90,6 @@ module ZoteroDB::Models
 
   class Field
     include DataMapper::Resource
-
-    DM_CONFLICT_MAP = %W(type repository).inject({}) do |map, thing|
-      map[thing] = "___#{thing}"; map
-    end
-
-    def safe_name
-      DM_CONFLICT_MAP[name] || name
-    end
-
-    def self.real_name(safe_name)
-      DM_CONFLICT_MAP.index(safe_name)
-    end
 
     #def self.default_repository_name
     #  SYSTEM_REPOSITORY
@@ -280,9 +275,6 @@ module ZoteroDB::Models
         raise "Can only set one value" if args.size != 1
       end
 
-      # special cases to get around fields named the same as existing methods
-      m = Field.real_name(m.to_s) || m
-
       # Make sure the field isn't a multi-parameter field. If so, do the
       # necessary conversions.
       m, property = if Field.respond_to?(:get_actual_name_and_property)
@@ -303,9 +295,9 @@ module ZoteroDB::Models
       end
 
       # bail out if no field was found
-      return super unless field
+      raise NoMethodError.new("\"#{m}\" is not a Field on an \"#{self.item_type.name}\" ItemType") unless field
 
-      data =  ItemData.first(:field_id => field.id, :item_id => self.id)
+      data = ItemData.first(:field_id => field.id, :item_id => self.id)
 
       # Give up if trying to get a value that doesn't exist
       return nil if !setter && !data
@@ -315,13 +307,13 @@ module ZoteroDB::Models
         # Typecast the value being set
         data_value = if field.respond_to?(:field_type)
           if property
-            _type = data ? 
-              field.field_type.new(data.value.value) : 
-              field.field_type.new
+            _type = data ?
+              field.field_type(self.item_type).new(data.value.value) :
+              field.field_type(self.item_type).new
             _type.send("#{property}=", args.first)
             _type
           else
-            field.field_type.new(args.first)
+            field.field_type(self.item_type).new(args.first)
           end.to_s
         else
           # If for some reason we don't know the field type,
@@ -338,14 +330,17 @@ module ZoteroDB::Models
         else
           data.update_attributes(:item_data_value_id => value.id)
         end
-      end
 
-      if data.respond_to?(:typecast_value) && !property
-        data.typecast_value
-      elsif data.respond_to?(:typecast_value) && property :
-        data.typecast_value.send(property)
       else
-        data.value.value
+
+        if data.respond_to?(:typecast_value) && !property
+          data.typecast_value
+        elsif data.respond_to?(:typecast_value) && property :
+          data.typecast_value.send(property)
+        else
+          data.value.value
+        end
+
       end
     end
     
@@ -403,6 +398,9 @@ module ZoteroDB::Models
     has n, :creators
 
     def full_name(options = {})
+      if self.first_name && self.first_name.size == 1
+        self.first_name = "#{self.first_name}."
+      end
       if options[:first_name_first]
         "#{first_name}#{ " #{middle_name[0..0].upcase}." if middle_name } #{last_name}"
       else

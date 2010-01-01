@@ -39,6 +39,7 @@ module ZoteroDB::Models
 
     property :id, Serial, :field => 'itemTypeID'
     property :name, String, :field => 'typeName'
+    property :display_name, String, :field => 'displayName'
     property :display, Enum[:hide, :display, :primary], :default => :display
     
     class << self

@@ -156,7 +156,7 @@ module ZoteroDB::Models
     belongs_to :item_type
 
     belongs_to :field
-    belongs_to :base_field, :class_name => "Field", 
+    belongs_to :base_field, :model => "Field", 
       :child_key => [:base_field_id]
   end
 
@@ -329,7 +329,7 @@ module ZoteroDB::Models
           data = ItemData.create(:field => field,
             :item_data_value => value, :item_id => self.id)
         else
-          data.update_attributes(:item_data_value_id => value.id)
+          data.update(:item_data_value_id => value.id)
         end
 
       else
@@ -536,7 +536,7 @@ module ZoteroDB::Models
       options = {:ttype => 0}.merge(options) # Zotero requires a itemTags.type field
       t   = Tag.first options
       t ||= Tag.create options
-      unless t.new_record?
+      unless t.new?
         create :item_id => item_id, :tag_id => t.id
       else
         raise Exception.new(t.errors)

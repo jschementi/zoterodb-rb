@@ -85,7 +85,7 @@ describe ItemType do
   end
 
   it 'is creatable' do
-    @it.new_record?.should == false
+    @it.new?.should == false
   end
 
   it 'is displayed by default' do
@@ -169,7 +169,7 @@ describe Field do
   end
 
   it 'is creatable' do
-    @f1.new_record?.should == false
+    @f1.new?.should == false
     @f1.name.should == 'field1'
     @f1.id.kind_of?(Integer).class == Integer
   end
@@ -396,11 +396,12 @@ describe Item do
     name = {:first => 'Michael', :middle => 'Thomas', :last => 'Schementi'}
     @i['author'].size.should == 1
     @i['author'] = name
-    @i['author'].last.creator.creator_data.first_name.
+    @i['author'].size.should == 2
+    @i['author'][1].creator.creator_data.first_name.
       should == name[:first]
-    @i['author'].last.creator.creator_data.middle_name.
+    @i['author'][1].creator.creator_data.middle_name.
       should == name[:middle]
-    @i['author'].last.creator.creator_data.last_name.
+    @i['author'][1].creator.creator_data.last_name.
       should == name[:last]
   end
 
@@ -470,7 +471,7 @@ describe CreatorData do
   end
   
   it 'is creatable' do
-    @cd.new_record?.should be_false
+    @cd.new?.should be_false
   end
   
   it 'has a mode which decides whether the last name should be parsed' do
@@ -601,7 +602,7 @@ describe ItemNote do
   end
 
   it 'is creatable' do
-    @note.new_record?.should be_false
+    @note.new?.should be_false
   end
 
   it 'belongs to an item' do
@@ -630,7 +631,7 @@ describe ItemAttachment do
   end
 
   it 'is creatable' do
-    @a.new_record?.should be_false
+    @a.new?.should be_false
   end
 
   it 'belongs to an item' do
@@ -692,7 +693,7 @@ describe Project do
   end
 
   it 'is creatable' do
-    @c.new_record?.should be_false
+    @c.new?.should be_false
   end
 end
 
@@ -706,7 +707,7 @@ describe ProjectItem do
   end
 
   it 'is creatable' do
-    @ci.new_record?.should be_false
+    @ci.new?.should be_false
   end
 
   it 'belongs to a project' do
